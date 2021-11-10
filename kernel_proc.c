@@ -52,12 +52,11 @@ static inline void initialize_PCB(PCB* pcb)
   pcb->child_exit = COND_INIT;
 }
 
-static inline void initialize_PTCB(PTCB* ptcb)
+void initialize_PTCB(PTCB* ptcb)
 {
   ptcb->argl = 0;
   ptcb->args = NULL;
   rlnode_init(&ptcb->ptcb_list_node,ptcb);
-
 
 }
 
