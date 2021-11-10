@@ -18,6 +18,9 @@
 #include "tinyos.h"
 #include "kernel_sched.h"
 
+//void initialize_PTCB(PTCB* ptcb);
+
+
 /**
   @brief PID state
 
