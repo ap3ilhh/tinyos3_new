@@ -18,7 +18,7 @@
 #include "tinyos.h"
 #include "kernel_sched.h"
 
-//void initialize_PTCB(PTCB* ptcb);
+void initialize_PTCB(PTCB* ptcb);
 
 
 /**
