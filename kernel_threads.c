@@ -64,8 +64,18 @@ int sys_ThreadJoin(Tid_t tid, int* exitval)
     return -1;
   }
 
+  else if (cur_thread()->ptcb ==(PTCB*)tid){
+    return -1;
+  }
 
-	return -1;
+  else if((PTCB*)tid->detached == 1){
+    return -1;
+  }
+
+  kernel_wait(&((PTCB*)tid->exit_cv),SCHED_USER);
+
+  return 0;
+	
 }
 
 /**
