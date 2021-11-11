@@ -74,6 +74,12 @@ int sys_ThreadJoin(Tid_t tid, int* exitval)
 
   kernel_wait(&(((PTCB*)tid)->exit_cv),SCHED_USER);
 
+  if(exitval != NULL)
+  {
+    *exitval = ((PTCB*)tid)->exitval;
+  }
+
+
   return 0;
 	
 }
