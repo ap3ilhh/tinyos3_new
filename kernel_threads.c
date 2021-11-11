@@ -37,7 +37,7 @@ Tid_t sys_CreateThread(Task task, int argl, void* args)
   rlist_push_back(&CURPROC->ptcb_list,&ptcb->ptcb_list_node);
 
   //enhmrwsh tcb
-  ptcb->tcb->owner_pcb = CURPROC;
+  //ptcb->tcb->owner_pcb = CURPROC;
   ptcb->tcb->ptcb = ptcb;
 
 
@@ -59,6 +59,12 @@ Tid_t sys_ThreadSelf()
   */
 int sys_ThreadJoin(Tid_t tid, int* exitval)
 {
+  /*elegxos an to tid einai ths curproc*/
+  if (rlist_find(&CURPROC->ptcb_list, (PTCB*)tid, NULL)==NULL){
+    return -1;
+  }
+
+
 	return -1;
 }
 
