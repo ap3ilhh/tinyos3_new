@@ -79,7 +79,7 @@ int sys_ThreadJoin(Tid_t tid, int* exitval)
     *exitval = ((PTCB*)tid)->exitval;
   }
 
-
+//
   return 0;
 	
 }
