@@ -63,14 +63,16 @@ int sys_ThreadJoin(Tid_t tid, int* exitval)
   if (rlist_find(&CURPROC->ptcb_list, (PTCB*)tid, NULL)==NULL){
     return -1;
   }
-
+  /*an to thread zhta apo ton euato tou na tou kanei join*/
   else if (cur_thread()->ptcb ==(PTCB*)tid){
     return -1;
   }
-
+  /*an to thread dn einai joinable*/
   else if(((PTCB*)tid)->detached == 1){
     return -1;
   }
+  //mporei na ginei threadjoin 
+  ((PTCB*)tid)->refcount ++;
 
   kernel_wait(&(((PTCB*)tid)->exit_cv),SCHED_USER);
 
@@ -78,7 +80,13 @@ int sys_ThreadJoin(Tid_t tid, int* exitval)
   {
     *exitval = ((PTCB*)tid)->exitval;
   }
+  /*an to tid teleiwsei tote meiwnw ti refcount*/
+  if(((PTCB*)tid)->exited == 1){
+    ((PTCB*)tid)->refcount --;
+  }
 
+  //periptvsh opou ginetai detechef to tid
+  //...............todo
 
   return 0;
 	
@@ -88,8 +96,26 @@ int sys_ThreadJoin(Tid_t tid, int* exitval)
   @brief Detach the given thread.
   */
 int sys_ThreadDetach(Tid_t tid)
-{
-	return -1;
+{ 
+  /*an to thread einai detached*/
+  if (((PTCB*)tid)->detached == 1 ){
+    return -1;
+  } 
+  /*elegxos an to tid einai ths curproc*/
+  if (rlist_find(&CURPROC->ptcb_list, (PTCB*)tid, NULL)==NULL){
+    return -1;
+  }
+  /*to thread einai exited*/
+  if (((PTCB*)tid)->exited == 1){
+    return -1;
+  }
+  /*thread detached*/
+  ((PTCB*)tid)->detached = 1;
+
+  /*ksupanei ola ta threads pou to perimenan*/
+  kernel_broadcast(&(((PTCB*)tid)->exit_cv));
+
+	return 0;
 }
 
 /**
