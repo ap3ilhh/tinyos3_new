@@ -131,6 +131,8 @@ typedef struct thread_control_block {
   /****************************************/
   /*update*/
   PTCB* ptcb;
+  /*gia na kseroume poia priority exei to thread*/
+  int priority;
 
 } TCB;
 
@@ -188,6 +190,11 @@ TCB* cur_thread();
   @brief A timeout constant, denoting no timeout for sleep.
 */
 #define NO_TIMEOUT ((TimerDuration)-1)
+
+/**********************************************************/
+/*orizw mia stathera gia to poses oures 8a exw*/
+#define PRIORITY_QUEUES 5
+
 
 /**
 	@brief Create a new thread.
