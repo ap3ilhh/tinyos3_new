@@ -5,8 +5,19 @@
 #include "kernel_cc.h"
 #include "util.h"
 #include "tinyos.h"
+#include "kernel_streams.h"
 
 void start_new_thread();
+
+
+/* This is specific to Intel Pentium! */
+#define SYSTEM_PAGE_SIZE (1 << 12)
+
+/* The memory allocated for the TCB must be a multiple of SYSTEM_PAGE_SIZE */
+#define THREAD_TCB_SIZE \
+  (((sizeof(TCB) + SYSTEM_PAGE_SIZE - 1) / SYSTEM_PAGE_SIZE) * SYSTEM_PAGE_SIZE)
+
+#define THREAD_SIZE (THREAD_TCB_SIZE + THREAD_STACK_SIZE)
 
 /** 
   @brief Create a new thread in the current process.
@@ -51,7 +62,7 @@ Tid_t sys_CreateThread(Task task, int argl, void* args)
  */
 Tid_t sys_ThreadSelf()
 {
-	return (Tid_t) cur_thread();
+	return (Tid_t) cur_thread()->ptcb;
 }
 
 /**
@@ -85,8 +96,6 @@ int sys_ThreadJoin(Tid_t tid, int* exitval)
     ((PTCB*)tid)->refcount --;
   }
 
-  //periptvsh opou ginetai detached to tid
-  //...............todo
 
   return 0;
 	
@@ -97,23 +106,28 @@ int sys_ThreadJoin(Tid_t tid, int* exitval)
   */
 int sys_ThreadDetach(Tid_t tid)
 { 
-  /*an to thread einai detached*/
-  if (((PTCB*)tid)->detached == 1 ){
-    return -1;
-  } 
-  /*elegxos an to tid einai ths curproc*/
+
+  PTCB* ptcb = (PTCB*)tid;
+
+    /*elegxos an to tid einai ths curproc*/
   if (rlist_find(&CURPROC->ptcb_list, (PTCB*)tid, NULL)==NULL){
     return -1;
   }
+
+  /*an to thread einai detached*/
+  if (ptcb->detached == 1 ){
+    return 0;
+  } 
+
   /*to thread einai exited*/
-  if (((PTCB*)tid)->exited == 1){
+  if (ptcb->exited == 1){
     return -1;
   }
   /*thread detached*/
-  ((PTCB*)tid)->detached = 1;
+  ptcb->detached = 1;
 
-  /*ksupanei ola ta threads pou to perimenan*/
-  kernel_broadcast(&(((PTCB*)tid)->exit_cv));
+  /*ksupnaei ola ta threads pou to perimenan*/
+  kernel_broadcast(&(ptcb->exit_cv));
 
 	return 0;
 }
@@ -124,9 +138,23 @@ int sys_ThreadDetach(Tid_t tid)
 void sys_ThreadExit(int exitval)
 {
   PCB *curproc = CURPROC;
-  
+  TCB* curthread = cur_thread();
+  PTCB* curptcb = curthread->ptcb;
+
+  curptcb->exitval = exitval;
+  curptcb->exited = 1;
+  curptcb->tcb = NULL;
+
+  /*free the curthread*/
+  free_thread(curthread,THREAD_SIZE);
+
+
+  /*meiwsh tou counter pou metraei ta threads sto pcb*/
+  curproc->thread_count--;
+
   /* an to thread einai teleutaio*/
-  if(CURPROC->thread_count == 0){
+  if(CURPROC->thread_count == 0)
+  {
     
 
     /* Reparent any children of the exiting process to the 
@@ -143,7 +171,7 @@ void sys_ThreadExit(int exitval)
     if(!is_rlist_empty(& curproc->exited_list)) {
       rlist_append(& initpcb->exited_list, &curproc->exited_list);
       kernel_broadcast(& initpcb->child_exit);
-  }
+    }
 
     /* Put me into my parent's exited list */
     rlist_push_front(& curproc->parent->exited_list, &curproc->exited_node);
@@ -183,14 +211,12 @@ void sys_ThreadExit(int exitval)
 
     /* Bye-bye cruel world */
     kernel_sleep(EXITED, SCHED_USER);
-    }
-    
+  }
 
-    /*ksupanei ola ta threads pou to perimenan*/
-    kernel_broadcast(&(cur_thread()->ptcb->exit_cv));
+  /*ksupanei ola ta threads pou to perimenan*/
+  kernel_broadcast(&(curptcb->exit_cv));
 
-    /*meiwsh tou counter pou metraei ta threads sto pcb*/
-    curproc->thread_count--;
+
 
 }
 
