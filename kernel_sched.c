@@ -423,8 +423,34 @@ void sleep_releasing(Thread_state state, Mutex* mx, enum SCHED_CAUSE cause,
 
 /* This function is the entry point to the scheduler's context switching */
 
+/*metrhths pou metraei pws fores kalwsthke h yield()*/
+static int yield_count = 0;
+
+void boost(){
+	rlnode* node_ptr;
+	/*diasxizw ton pinaka apo SCHED apo to lowest prioritymexri highest-1 afou auto 
+	me th highest den mporei na parei megaluterh proteraiothta*/
+	for (int i=0; i<PRIORITY_QUEUES - 1 ;i++)
+		/*oso h lista den einai adeia bgazw threads tous auksanw priority
+		kai ta vazw sthn oura me thn amesws megaluterh priority*/
+		while (!is_rlist_empty(&SCHED[i])){
+			node_ptr = rlist_pop_front(&SCHED[i]);
+			node_ptr->tcb->priority++;
+			rlist_push_back(&SCHED[i+1],node_ptr);
+		}
+
+}
+
+
+
 void yield(enum SCHED_CAUSE cause)
-{
+{	
+	if (yield_count == PERIOD){
+		yield_count = 0;
+		boost();
+	}else{
+		yield_count++;
+	}
 	/* Reset the timer, so that we are not interrupted by ALARM */
 	TimerDuration remaining = bios_cancel_timer();
 

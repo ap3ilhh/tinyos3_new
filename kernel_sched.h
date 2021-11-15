@@ -195,6 +195,9 @@ TCB* cur_thread();
 /*orizw mia stathera gia to poses oures 8a exw*/
 #define PRIORITY_QUEUES 5
 
+/*orizw thn periodo pou 8a ginetai boost()*/
+#define PERIOD 5
+
 
 /**
 	@brief Create a new thread.
