@@ -171,6 +171,11 @@ TCB* spawn_thread(PCB* pcb, void (*func)())
 	tcb->last_cause = SCHED_IDLE;
 	tcb->curr_cause = SCHED_IDLE;
 
+	/*********************************************************/
+	/*arxikopoish tou priority sthn highest priority*/
+	tcb->priority = PRIORITY_QUEUES - 1;
+
+
 	/* Compute the stack segment address and size */
 	void* sp = ((void*)tcb) + THREAD_TCB_SIZE;
 
@@ -224,8 +229,11 @@ void release_TCB(TCB* tcb)
 
   Both of these structures are protected by @c sched_spinlock.
 */
+/************************************************************/
+/*o SCHED ginetai pinakas pou deixnei se PRIORITY_QUEUES oures*/
+rlnode SCHED[PRIORITY_QUEUES]; /* The scheduler queue */
 
-rlnode SCHED; /* The scheduler queue */
+
 rlnode TIMEOUT_LIST; /* The list of threads with a timeout */
 Mutex sched_spinlock = MUTEX_INIT; /* spinlock for scheduler queue */
 
@@ -268,7 +276,7 @@ static void sched_register_timeout(TCB* tcb, TimerDuration timeout)
 static void sched_queue_add(TCB* tcb)
 {
 	/* Insert at the end of the scheduling list */
-	rlist_push_back(&SCHED, &tcb->sched_node);
+	rlist_push_back(&SCHED[tcb->priority], &tcb->sched_node);
 
 	/* Restart possibly halted cores */
 	cpu_core_restart_one();
@@ -326,8 +334,20 @@ static void sched_wakeup_expired_timeouts()
 */
 static TCB* sched_queue_select(TCB* current)
 {
+	/***************************************************************/
+	/*elegxos mexri na vrw kapoio SCHED list pou den einai adeio*/
+	int priority = PRIORITY_QUEUES - 1;
+	while(is_rlist_empty(&SCHED[priority]) == 1){
+		/*an to priority einai den einai to lowest meiwse to alliws break*/
+		if (priority!=0)
+			priority--;
+		else
+			break;
+	}
+
+
 	/* Get the head of the SCHED list */
-	rlnode* sel = rlist_pop_front(&SCHED);
+	rlnode* sel = rlist_pop_front(&SCHED[priority]);
 
 	TCB* next_thread = sel->tcb; /* When the list is empty, this is NULL */
 
@@ -434,6 +454,30 @@ void yield(enum SCHED_CAUSE cause)
 	/* Save the current TCB for the gain phase */
 	CURCORE.previous_thread = current;
 
+	/**********************************************************/
+	/*elegxos gia thn aitia pou kalesthke h yield(...)*/
+	switch(cause)
+	{
+		case SCHED_QUANTUM :
+		/*an den vrisketai hdh sthn lowest priority queue*/
+			if (current->priority != 0)
+				current->priority--;
+			break;
+
+		case SCHED_IO :
+		/*an den vrisketai hdh sthn highest priority queue*/
+			if (current->priority != PRIORITY_QUEUES - 1)
+				current->priority++;
+			break;
+
+		case SCHED_MUTEX :
+			if (current->curr_cause == current->last_cause){
+				if (current->priority != 0)
+					current->priority--;
+			}
+			break;		
+	}
+
 	Mutex_Unlock(&sched_spinlock);
 
 	/* Switch contexts */
@@ -516,12 +560,17 @@ static void idle_thread()
 	cpu_core_restart_all();
 }
 
+/*******************************************************/
+/*update*/
 /*
   Initialize the scheduler queue
  */
 void initialize_scheduler()
 {
-	rlnode_init(&SCHED, NULL);
+	for(int i=0; i<=PRIORITY_QUEUES - 1; i++){
+		rlnode_init(&SCHED[i], NULL);
+	}
+	
 	rlnode_init(&TIMEOUT_LIST, NULL);
 }
 
