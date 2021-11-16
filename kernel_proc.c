@@ -346,7 +346,7 @@ void sys_Exit(int exitval)
     while(sys_WaitChild(NOPROC,NULL)!=NOPROC);
 
   }
-  ThreadExit(exitval);
+  sys_ThreadExit(exitval);
 }
 
 

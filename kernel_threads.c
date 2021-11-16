@@ -85,7 +85,7 @@ int sys_ThreadJoin(Tid_t tid, int* exitval)
   //mporei na ginei threadjoin 
   ((PTCB*)tid)->refcount ++;
 
-  kernel_wait(&(((PTCB*)tid)->exit_cv),SCHED_USER);
+  kernel_wait(&(cur_thread()->ptcb->exit_cv),SCHED_USER);
 
   if(exitval != NULL)
   {
@@ -150,31 +150,32 @@ void sys_ThreadExit(int exitval)
   curproc->thread_count--;
 
   /* an to thread einai teleutaio*/
-  if(curproc->thread_count <= 1)
+  if(curproc->thread_count == 0)
   {
-    
+    if(get_pid(curproc)!=1)
+    {  
 
-    /* Reparent any children of the exiting process to the 
-    initial task */
-    PCB* initpcb = get_pcb(1);
-    while(!is_rlist_empty(& curproc->children_list)) {
-      rlnode* child = rlist_pop_front(& curproc->children_list);
-      child->pcb->parent = initpcb;
-      rlist_push_front(& initpcb->children_list, child);
+      /* Reparent any children of the exiting process to the 
+      initial task */
+      PCB* initpcb = get_pcb(1);
+      while(!is_rlist_empty(& curproc->children_list)) {
+        rlnode* child = rlist_pop_front(& curproc->children_list);
+        child->pcb->parent = initpcb;
+        rlist_push_front(& initpcb->children_list, child);
+      }
+
+      /* Add exited children to the initial task's exited list 
+       and signal the initial task */
+      if(!is_rlist_empty(& curproc->exited_list)) {
+        rlist_append(& initpcb->exited_list, &curproc->exited_list);
+        kernel_broadcast(& initpcb->child_exit);
+      }
+
+      /* Put me into my parent's exited list */
+      rlist_push_front(& curproc->parent->exited_list, &curproc->exited_node);
+      kernel_broadcast(& curproc->parent->child_exit);
+
     }
-
-    /* Add exited children to the initial task's exited list 
-     and signal the initial task */
-    if(!is_rlist_empty(& curproc->exited_list)) {
-      rlist_append(& initpcb->exited_list, &curproc->exited_list);
-      kernel_broadcast(& initpcb->child_exit);
-    }
-
-    /* Put me into my parent's exited list */
-    rlist_push_front(& curproc->parent->exited_list, &curproc->exited_node);
-    kernel_broadcast(& curproc->parent->child_exit);
-
-
 
     assert(is_rlist_empty(& curproc->children_list));
     assert(is_rlist_empty(& curproc->exited_list));
@@ -203,9 +204,6 @@ void sys_ThreadExit(int exitval)
 
     /* Now, mark the process as exited. */
     curproc->pstate = ZOMBIE;
-
-
-
   }
 
   /*ksupanei ola ta threads pou to perimenan*/
