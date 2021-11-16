@@ -150,7 +150,7 @@ void sys_ThreadExit(int exitval)
   curproc->thread_count--;
 
   /* an to thread einai teleutaio*/
-  if(CURPROC->thread_count == 0)
+  if(curproc->thread_count <= 1)
   {
     
 
