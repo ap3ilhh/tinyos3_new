@@ -145,9 +145,6 @@ void sys_ThreadExit(int exitval)
   curptcb->exited = 1;
   curptcb->tcb = NULL;
 
-  /*free the curthread*/
-  free_thread(curthread,THREAD_SIZE);
-
 
   /*meiwsh tou counter pou metraei ta threads sto pcb*/
   curproc->thread_count--;
@@ -209,14 +206,14 @@ void sys_ThreadExit(int exitval)
 
 
 
-    /* Bye-bye cruel world */
-    kernel_sleep(EXITED, SCHED_USER);
   }
 
   /*ksupanei ola ta threads pou to perimenan*/
   kernel_broadcast(&(curptcb->exit_cv));
 
 
+  /* Bye-bye cruel world */
+  kernel_sleep(EXITED, SCHED_USER);
 
 }
 

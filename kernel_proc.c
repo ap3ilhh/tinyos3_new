@@ -345,13 +345,11 @@ void sys_Exit(int exitval)
 
     while(sys_WaitChild(NOPROC,NULL)!=NOPROC);
 
-  } else {
-
-    while(curproc->thread_count>0){
-      ThreadExit(0);
   }
-
+  ThreadExit(exitval);
 }
+
+
 
 
 
