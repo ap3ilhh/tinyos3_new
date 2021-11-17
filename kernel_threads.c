@@ -85,7 +85,12 @@ int sys_ThreadJoin(Tid_t tid, int* exitval)
   //mporei na ginei threadjoin 
   ((PTCB*)tid)->refcount ++;
 
-  kernel_wait(&(cur_thread()->ptcb->exit_cv),SCHED_USER);
+  while(((PTCB*)tid)->exited==0 && ((PTCB*)tid)->detached==0)
+  {
+    kernel_wait(&((PTCB*)tid)->exit_cv, SCHED_USER);
+  }
+  
+  //kernel_wait(&(cur_thread()->ptcb->exit_cv),SCHED_USER);
 
   if(exitval != NULL)
   {
@@ -149,6 +154,9 @@ void sys_ThreadExit(int exitval)
   /*meiwsh tou counter pou metraei ta threads sto pcb*/
   curproc->thread_count--;
 
+  /*ksupanei ola ta threads pou to perimenan*/
+  kernel_broadcast(&(curptcb->exit_cv));
+
   /* an to thread einai teleutaio*/
   if(curproc->thread_count == 0)
   {
@@ -206,8 +214,7 @@ void sys_ThreadExit(int exitval)
     curproc->pstate = ZOMBIE;
   }
 
-  /*ksupanei ola ta threads pou to perimenan*/
-  kernel_broadcast(&(curptcb->exit_cv));
+
 
 
   /* Bye-bye cruel world */
