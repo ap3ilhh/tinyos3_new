@@ -91,6 +91,10 @@ int sys_ThreadJoin(Tid_t tid, int* exitval)
   }
   
   //kernel_wait(&(cur_thread()->ptcb->exit_cv),SCHED_USER);
+  if(((PTCB*)tid)->detached == 1)
+  {
+    return -1;
+  }
 
   if(exitval != NULL)
   {
@@ -100,7 +104,6 @@ int sys_ThreadJoin(Tid_t tid, int* exitval)
   if(((PTCB*)tid)->exited == 1){
     ((PTCB*)tid)->refcount --;
   }
-
 
   return 0;
 	
