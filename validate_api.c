@@ -1316,7 +1316,6 @@ BOOT_TEST(test_main_exit_cleanup,
 int noexit_cleanup_task(int argl, void* args) {
 	fibo(40);
 	ThreadExit(2);
-	fprintf(stderr,"ThreadExit(2)");
 	FAIL("We should not be here");
 	return 0;
 }
@@ -1327,7 +1326,6 @@ int noexit_cleanup_mthread(int argl, void* args){
 
 	/* This thread calls exit probably before the children all exit */
 	ThreadExit(0);
-	fprintf(stderr,"ThreadExit(0)");
 	FAIL("We should not be here");
 	return 42;
 }
