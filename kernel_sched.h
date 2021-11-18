@@ -196,7 +196,7 @@ TCB* cur_thread();
 #define PRIORITY_QUEUES 5
 
 /*orizw thn periodo pou 8a ginetai boost()*/
-#define PERIOD 5
+#define PERIOD 100
 
 
 /**

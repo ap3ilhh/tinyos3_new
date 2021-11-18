@@ -173,7 +173,7 @@ TCB* spawn_thread(PCB* pcb, void (*func)())
 
 	/*********************************************************/
 	/*arxikopoish tou priority sthn highest priority*/
-	tcb->priority = PRIORITY_QUEUES - 1;
+	tcb->priority = (PRIORITY_QUEUES - 1)/2;
 
 
 	/* Compute the stack segment address and size */
@@ -337,12 +337,9 @@ static TCB* sched_queue_select(TCB* current)
 	/***************************************************************/
 	/*elegxos mexri na vrw kapoio SCHED list pou den einai adeio*/
 	int priority = PRIORITY_QUEUES - 1;
-	while(is_rlist_empty(&SCHED[priority]) == 1){
-		/*an to priority einai den einai to lowest meiwse to alliws break*/
-		if (priority!=0)
+	while(is_rlist_empty(&SCHED[priority]) == 1 && priority > 0){
+		/*an to priority  den einai to lowest meiwse to */
 			priority--;
-		else
-			break;
 	}
 
 
@@ -428,9 +425,9 @@ static int yield_count = 0;
 
 void boost(){
 	rlnode* node_ptr;
-	/*diasxizw ton pinaka apo SCHED apo to lowest prioritymexri highest-1 afou auto 
+	/*diasxizw ton pinaka apo SCHED apo to lowest priority mexri highest-1 afou auto 
 	me th highest den mporei na parei megaluterh proteraiothta*/
-	for (int i=0; i<PRIORITY_QUEUES - 1 ;i++)
+	for (int i=PRIORITY_QUEUES - 2; i>=0 ;i--)
 		/*oso h lista den einai adeia bgazw threads tous auksanw priority
 		kai ta vazw sthn oura me thn amesws megaluterh priority*/
 		while (!is_rlist_empty(&SCHED[i])){
@@ -501,6 +498,9 @@ void yield(enum SCHED_CAUSE cause)
 				if (current->priority != 0)
 					current->priority--;
 			}
+			break;
+
+		default:
 			break;		
 	}
 
@@ -593,7 +593,7 @@ static void idle_thread()
  */
 void initialize_scheduler()
 {
-	for(int i=0; i<=PRIORITY_QUEUES - 1; i++){
+	for(int i=0; i<PRIORITY_QUEUES; i++){
 		rlnode_init(&SCHED[i], NULL);
 	}
 	
