@@ -74,14 +74,17 @@ int sys_ThreadJoin(Tid_t tid, int* exitval)
   if (rlist_find(&CURPROC->ptcb_list, (PTCB*)tid, NULL)==NULL){
     return -1;
   }
+
   /*an to thread zhta apo ton euato tou na tou kanei join*/
   else if (cur_thread()->ptcb ==(PTCB*)tid){
     return -1;
   }
+
   /*an to thread dn einai joinable*/
-  else if(((PTCB*)tid)->detached == 1){
+  else if(((PTCB*)tid)->detached == 1 ){
     return -1;
   }
+
   //mporei na ginei threadjoin 
   ((PTCB*)tid)->refcount ++;
 
@@ -90,19 +93,25 @@ int sys_ThreadJoin(Tid_t tid, int* exitval)
     kernel_wait(&((PTCB*)tid)->exit_cv, SCHED_USER);
   }
   
-  //kernel_wait(&(cur_thread()->ptcb->exit_cv),SCHED_USER);
+  //an egine detach epestrepse
   if(((PTCB*)tid)->detached == 1)
   {
     return -1;
   }
 
+  /*to tid exei teleiwsei*/
+
+  ((PTCB*)tid)->refcount --;  /*tote meiwnw to refcount*/
+
   if(exitval != NULL)
   {
     *exitval = ((PTCB*)tid)->exitval;
   }
-  /*an to tid teleiwsei tote meiwnw to refcount*/
-  if(((PTCB*)tid)->exited == 1){
-    ((PTCB*)tid)->refcount --;
+
+ /*free to ptcb*/
+  if(((PTCB*)tid)->refcount == 0){
+    rlist_remove(&((PTCB*)tid)->ptcb_list_node);
+    free(((PTCB*)tid));
   }
 
   return 0;
