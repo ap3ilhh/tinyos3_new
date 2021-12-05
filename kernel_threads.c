@@ -9,16 +9,6 @@
 
 void start_new_thread();
 
-
-/* This is specific to Intel Pentium! */
-#define SYSTEM_PAGE_SIZE (1 << 12)
-
-/* The memory allocated for the TCB must be a multiple of SYSTEM_PAGE_SIZE */
-#define THREAD_TCB_SIZE \
-  (((sizeof(TCB) + SYSTEM_PAGE_SIZE - 1) / SYSTEM_PAGE_SIZE) * SYSTEM_PAGE_SIZE)
-
-#define THREAD_SIZE (THREAD_TCB_SIZE + THREAD_STACK_SIZE)
-
 /** 
   @brief Create a new thread in the current process.
   */
@@ -224,6 +214,12 @@ void sys_ThreadExit(int exitval)
 
     /* Now, mark the process as exited. */
     curproc->pstate = ZOMBIE;
+    /*free ola ta ptcb*/
+    rlnode* ptcb_l_node;
+    while(!is_rlist_empty(&CURPROC->ptcb_list)){
+      ptcb_l_node = rlist_pop_front(&CURPROC->ptcb_list);
+      free(ptcb_l_node->ptcb);
+    }
   }
 
 

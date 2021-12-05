@@ -420,13 +420,13 @@ void sleep_releasing(Thread_state state, Mutex* mx, enum SCHED_CAUSE cause,
 
 /* This function is the entry point to the scheduler's context switching */
 
-/*metrhths pou metraei pws fores kalwsthke h yield()*/
+/*metrhths pou metraei poses fores kalesthke h yield()*/
 static int yield_count = 0;
 
 void boost(){
 	rlnode* node_ptr;
-	/*diasxizw ton pinaka apo SCHED apo to lowest priority mexri highest-1 afou auto 
-	me th highest den mporei na parei megaluterh proteraiothta*/
+	/*diasxizw ton pinaka apo SCHED apo to highest-2 priority mexri lowest afou auto 
+	me th highest-1 den mporei na parei megaluterh proteraiothta*/
 	for (int i=PRIORITY_QUEUES - 2; i>=0 ;i--)
 		/*oso h lista den einai adeia bgazw threads tous auksanw priority
 		kai ta vazw sthn oura me thn amesws megaluterh priority*/
