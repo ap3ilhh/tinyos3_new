@@ -21,6 +21,22 @@
 void initialize_PTCB(PTCB* ptcb);
 
 
+/**************************************************/
+typedef struct procinfo_cb{
+  procinfo p_info;
+  int PCB_cursor;
+}procinfo_cb;
+
+
+int procinfo_read(void* pipecb_t, char *buf, unsigned int n);
+void* null_procinfo_open(uint minor);
+
+int null_procinfo_write(void* this, const char* buf, unsigned int size);
+int procinfo_close(void* _pipecb);
+
+
+/**************************************************/
+
 /**
   @brief PID state
 

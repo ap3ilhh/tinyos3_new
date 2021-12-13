@@ -214,6 +214,7 @@ void sys_ThreadExit(int exitval)
 
     /* Now, mark the process as exited. */
     curproc->pstate = ZOMBIE;
+    
     /*free ola ta ptcb*/
     rlnode* ptcb_l_node;
     while(!is_rlist_empty(&CURPROC->ptcb_list)){

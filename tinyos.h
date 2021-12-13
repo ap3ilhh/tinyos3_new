@@ -3,6 +3,8 @@
 #define __TINYOS_H__
 
 #include <stdint.h>
+#include "util.h"
+
 
 /**
   @file tinyos.h
@@ -52,6 +54,8 @@ typedef int Fid_t;
 /** @brief The invalid file id. */
 #define NOFILE  (-1)
 
+/*****************************************/
+#define PIPE_BUFFER_SIZE 8000
 
 /**
   @brief The type of a thread ID.
@@ -511,6 +515,33 @@ typedef struct pipe_s {
 } pipe_t;
 
 
+typedef struct pipe_control_block {
+  FCB * reader, *writter;         //fd gia grapsimo kai diavasma
+  CondVar has_space;              //gia wait kai broadcast
+  CondVar has_data;
+  int w_position, r_position;     //pou 8a grafw kai diavazw
+  char BUFFER[PIPE_BUFFER_SIZE];
+}pipe_cb;
+
+/*int space_enough(pipe_cb pipeCB, int x){
+  int in = pipeCB->w_position;
+  int out = pipeCB->r_position;
+  
+  if (in >= out){
+    if(PIPE_BUFFER_SIZE - in) + out > n)
+        return 1;
+      else
+        return 0;
+    }
+  else
+    if(out - in > n)
+        return 1;
+      else
+        return 0;
+  }
+
+
+}*/
 /**
 	@brief Construct and return a pipe.
 

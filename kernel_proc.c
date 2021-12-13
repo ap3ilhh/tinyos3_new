@@ -349,12 +349,49 @@ void sys_Exit(int exitval)
   sys_ThreadExit(exitval);
 }
 
+static file_ops procinfo_ops = {
+  .Open = null_procinfo_open,
+  .Read = procinfo_read,
+  .Write = null_procinfo_write,
+  .Close = procinfo_close
+};
 
 
 
+
+void* null_procinfo_open(uint minor){
+  return NULL;
+}
+
+int null_procinfo_write(void* this, const char* buf, unsigned int size){
+  return -1;
+}
 
 Fid_t sys_OpenInfo()
 {
-	return NOFILE;
+ /* Fid_t fid;
+  FCB* fcb;
+
+  if (FCB_reserve(1,&fid,&fcb) == 0){
+    return NOFILE;
+  }
+
+  procinfo_cb* procinfo_cb;
+  procinfo_cb = (procinfo_cb*)xmalloc(sizeof(procinfo_cb));
+
+  procinfo_cb->
+
+  fcb->streamobj = procinfo_cb;
+  fcb->streamfunc = procinfo_ops;
+
+  return fid;*/
+	 return NOFILE;
 }
 
+int procinfo_close(void* _pipecb){
+  return -1;
+}
+
+int procinfo_read(void* pipecb_t, char *buf, unsigned int n){
+  return -1;
+}
