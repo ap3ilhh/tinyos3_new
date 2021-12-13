@@ -13,7 +13,7 @@ void* null_open(uint minor);
 int null_write(void* this, const char* buf, unsigned int size);
 int null_read(void* this, char *buf, unsigned int size);
 
-int count_f = 0;
+int count = 0;
 
 
 void* null_open(uint minor){
@@ -84,15 +84,15 @@ int pipe_write(void* pipecb_t, const char *buf, unsigned int n)
 {	
 	pipe_cb* pipeCB =(pipe_cb*)pipecb_t;
 
-	int count = 0;
+	int i;
 
 	//an o reader einai kleistos
 	if (pipeCB->reader == NULL)
 		return -1;
 
 	//oso o buffer einai gematos kai o reader einai anoixtos kane kernel_wait
-	while (pipeCB->w_position == (PIPE_BUFFER_SIZE-1) && pipeCB->reader != NULL ){
-		kernel_wait(&(pipeCB->has_space),SCHED_PIPE);
+	while (count == PIPE_BUFFER_SIZE && pipeCB->reader != NULL ){
+		kernel_wait(&pipeCB->has_space,SCHED_PIPE);
 	}
 
 	//otan vgei apo to kernel_wait 
@@ -100,13 +100,20 @@ int pipe_write(void* pipecb_t, const char *buf, unsigned int n)
 	if (pipeCB->reader == NULL)
 		return -1;
 
+	for (i = 0; i < n; i++){
+		if (pipeCB->w_position == pipeCB->r_position && pipeCB->w_position != 0){
+			break;
+		}
+		pipeCB->BUFFER[pipeCB->w_position] = buf[i];
+		pipeCB->w_position = (pipeCB->w_position + 1)%PIPE_BUFFER_SIZE;
+		count++;
+	}
 
-	
 	//ksupna osa perimenoun na grapseis 
 	kernel_broadcast(&pipeCB->has_space);
 
 
-	return count;
+	return i;
 }
 
 
@@ -115,9 +122,11 @@ int pipe_read(void* pipecb_t, char *buf, unsigned int n)
 {	
 	pipe_cb* pipeCB =(pipe_cb*)pipecb_t;
 
-	int count = 0; 
+	int i;
 
-
+	if (pipeCB->writter == NULL){
+		//todo
+	}
 
 	while (count == 0 && pipeCB->writter != NULL){
 		kernel_wait(&pipeCB->has_data,SCHED_PIPE);
@@ -126,10 +135,18 @@ int pipe_read(void* pipecb_t, char *buf, unsigned int n)
 	if (pipeCB->writter == NULL)
 		return -1;
 	
+	for(i = 0; i < n; i++){
+		if (pipeCB->w_position - pipeCB->r_position == 1){
+			break;
+		}
+		buf[i] = pipeCB->BUFFER[pipeCB->r_position];
+		pipeCB->r_position = (pipeCB->r_position + 1)%PIPE_BUFFER_SIZE;
+		count--;
+	}
 
 	kernel_broadcast(&(pipeCB->has_data));
 
-	return 0;
+	return i;
 }
 
 
