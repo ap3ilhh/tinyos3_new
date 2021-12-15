@@ -63,12 +63,12 @@ int sys_Pipe(pipe_t* pipe)
 
 	//initialize pipeCB
 	pipeCB->reader = fcb[0];
-	pipeCB->writter = fcb[1];
+	pipeCB->writer = fcb[1];
 	pipeCB->has_space = COND_INIT;
 	pipeCB->has_data = COND_INIT;
 	pipeCB->w_position = 0;  
 	pipeCB->r_position = 0; 
-
+	pipeCB->space_remaining = PIPE_BUFFER_SIZE;
 	//ta 2 FCB deixnoun sto idio pipe(streamobject)
 	fcb[0]->streamobj = pipeCB;
 	fcb[1]->streamobj = pipeCB;
@@ -86,12 +86,8 @@ int pipe_write(void* pipecb_t, const char *buf, unsigned int n)
 
 	int i;
 
-	//an o reader einai kleistos
-	if (pipeCB->reader == NULL)
-		return -1;
-
 	//oso o buffer einai gematos kai o reader einai anoixtos kane kernel_wait
-	while (count == PIPE_BUFFER_SIZE && pipeCB->reader != NULL ){
+	while (pipeCB->space_remaining == 0 && pipeCB->reader != NULL ){
 		kernel_wait(&pipeCB->has_space,SCHED_PIPE);
 	}
 
@@ -100,17 +96,15 @@ int pipe_write(void* pipecb_t, const char *buf, unsigned int n)
 	if (pipeCB->reader == NULL)
 		return -1;
 
-	for (i = 0; i < n; i++){
-		if (pipeCB->w_position == pipeCB->r_position && pipeCB->w_position != 0){
+	for (i = 0; i < pipeCB->space_remaining; i++){
+		if (i >= n)
 			break;
-		}
 		pipeCB->BUFFER[pipeCB->w_position] = buf[i];
 		pipeCB->w_position = (pipeCB->w_position + 1)%PIPE_BUFFER_SIZE;
-		count++;
 	}
-
+	pipeCB->space_remaining -= i; 
 	//ksupna osa perimenoun na grapseis 
-	kernel_broadcast(&pipeCB->has_space);
+	kernel_broadcast(&pipeCB->has_data);
 
 
 	return i;
@@ -124,27 +118,36 @@ int pipe_read(void* pipecb_t, char *buf, unsigned int n)
 
 	int i;
 
-	if (pipeCB->writter == NULL){
-		//todo
+	if (pipeCB->writer == NULL){
+	  if(pipeCB->space_remaining != PIPE_BUFFER_SIZE){
+			for (int i = 0; i < PIPE_BUFFER_SIZE - pipeCB->space_remaining; i++)
+			{
+				buf[i] = pipeCB->BUFFER[pipeCB->r_position];
+				pipeCB->r_position = (pipeCB->r_position + 1)%PIPE_BUFFER_SIZE;
+			}
+			pipeCB->space_remaining += i;
+		}
+		return 0;
 	}
 
-	while (count == 0 && pipeCB->writter != NULL){
+	while (pipeCB->space_remaining == PIPE_BUFFER_SIZE && pipeCB->writer != NULL){
 		kernel_wait(&pipeCB->has_data,SCHED_PIPE);
 	}
 
-	if (pipeCB->writter == NULL)
+	if (pipeCB->writer == NULL)
 		return -1;
 	
-	for(i = 0; i < n; i++){
-		if (pipeCB->w_position - pipeCB->r_position == 1){
+	for (int i = 0; i < PIPE_BUFFER_SIZE - pipeCB->space_remaining; i++)
+	{
+		if (i >= n)
 			break;
-		}
 		buf[i] = pipeCB->BUFFER[pipeCB->r_position];
 		pipeCB->r_position = (pipeCB->r_position + 1)%PIPE_BUFFER_SIZE;
-		count--;
 	}
+	pipeCB->space_remaining += i;
+	
 
-	kernel_broadcast(&(pipeCB->has_data));
+	kernel_broadcast(&(pipeCB->has_space));
 
 	return i;
 }
@@ -155,13 +158,7 @@ int pipe_writer_close(void* _pipecb)
 {
 	pipe_cb* pipeCB =(pipe_cb*)_pipecb;
 
-	pipeCB->writter = NULL;
-
-	if (pipeCB->reader != NULL){
-		kernel_broadcast(&pipeCB->has_data);
-	}
-	free(pipeCB);
-
+	pipeCB->writer = NULL;
 	return 0;
 }
 
@@ -171,12 +168,9 @@ int pipe_reader_close(void* _pipecb)
 	pipe_cb* pipeCB =(pipe_cb*)_pipecb;
 
 	pipeCB->reader = NULL; 
-
-	if (pipeCB->writter != NULL){
-		kernel_broadcast(&pipeCB->has_space);
+	if (pipeCB->writer != NULL){
 		return -1;
 	}
-
 	free(pipeCB);
 
 	return 0;

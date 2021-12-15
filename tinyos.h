@@ -516,14 +516,14 @@ typedef struct pipe_s {
 
 
 typedef struct pipe_control_block {
-  FCB * reader, *writter;         //fd gia grapsimo kai diavasma
+  FCB * reader, *writer;         //fd gia grapsimo kai diavasma
   CondVar has_space;              //gia wait kai broadcast
   CondVar has_data;
-  int w_position, r_position;     //pou 8a grafw kai diavazw
+  int w_position, r_position, space_remaining ;     //pou 8a grafw kai diavazw
   char BUFFER[PIPE_BUFFER_SIZE];
 }pipe_cb;
 
-/*int space_enough(pipe_cb pipeCB, int x){
+/*int space_man(pipe_cb pipeCB, int x){
   int in = pipeCB->w_position;
   int out = pipeCB->r_position;
   
