@@ -49,7 +49,7 @@ socket_cb* socket_t;
 
 	
 
-void* null_open(uint minor);
+void* socket_open(uint minor);
 
 int socket_read(void* socketcb_t, char *buf, unsigned int n);
 
@@ -58,21 +58,6 @@ int socket_write(void* socketcb_t, const char *buf, unsigned int n);
 int socket_close(void* socketcb_t);
 
 socket_cb* PORT_MAP[MAX_PORT];
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 

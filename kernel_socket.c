@@ -3,11 +3,10 @@
 #include "kernel_dev.h"
 #include "kernel_streams.h"
 #include "kernel_sched.h"
-#include "kernel_cc.h"
 #include "kernel_pipe.h"
 
 static file_ops socket_file_ops = {
-  .Open = null_open,
+  .Open = socket_open,
   .Read = socket_read,
   .Write = socket_write,
   .Close = socket_close
@@ -78,7 +77,7 @@ int socket_close(void* socketcb_t){
 	return -1;
 }
 
-void* null_open(uint minor){
+void* socket_open(uint minor){
 	return NULL;
 }
 
