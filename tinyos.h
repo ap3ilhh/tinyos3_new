@@ -55,7 +55,7 @@ typedef int Fid_t;
 #define NOFILE  (-1)
 
 /*****************************************/
-#define PIPE_BUFFER_SIZE 8000
+#define PIPE_BUFFER_SIZE 8192
 
 /**
   @brief The type of a thread ID.
