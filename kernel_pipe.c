@@ -84,7 +84,7 @@ int pipe_write(void* pipecb_t, const char *buf, unsigned int n)
 {	
 	pipe_cb* pipeCB =(pipe_cb*)pipecb_t;
 
-	int i;
+	int i = 0;
 
 	//oso o buffer einai gematos kai o reader einai anoixtos kane kernel_wait
 	while (pipeCB->space_remaining == 0 && pipeCB->reader != NULL ){
@@ -96,7 +96,7 @@ int pipe_write(void* pipecb_t, const char *buf, unsigned int n)
 	if (pipeCB->reader == NULL)
 		return -1;
 
-	for (i = 0; i < pipeCB->space_remaining; i++){
+	for (; i < pipeCB->space_remaining; i++){
 		if (i >= n)
 			break;
 		pipeCB->BUFFER[pipeCB->w_position] = buf[i];
@@ -116,11 +116,11 @@ int pipe_read(void* pipecb_t, char *buf, unsigned int n)
 {	
 	pipe_cb* pipeCB =(pipe_cb*)pipecb_t;
 
-	int i;
+	int i = 0;
 
 	if (pipeCB->writer == NULL){
 	  if(pipeCB->space_remaining != PIPE_BUFFER_SIZE){
-			for (int i = 0; i < PIPE_BUFFER_SIZE - pipeCB->space_remaining; i++)
+			for (; i < PIPE_BUFFER_SIZE - pipeCB->space_remaining; i++)
 			{
 				buf[i] = pipeCB->BUFFER[pipeCB->r_position];
 				pipeCB->r_position = (pipeCB->r_position + 1)%PIPE_BUFFER_SIZE;
@@ -135,10 +135,10 @@ int pipe_read(void* pipecb_t, char *buf, unsigned int n)
 		kernel_wait(&pipeCB->has_data,SCHED_PIPE);
 	}
 
-	if (pipeCB->writer == NULL)
-		return -1;
-	
-	for (int i = 0; i < PIPE_BUFFER_SIZE - pipeCB->space_remaining; i++)
+	if (pipeCB->writer == NULL && pipeCB->space_remaining == PIPE_BUFFER_SIZE)
+		return -1;	
+	i = 0;
+	for (; i < PIPE_BUFFER_SIZE - pipeCB->space_remaining; i++)
 	{
 		if (i >= n)
 			break;
