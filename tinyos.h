@@ -54,8 +54,7 @@ typedef int Fid_t;
 /** @brief The invalid file id. */
 #define NOFILE  (-1)
 
-/*****************************************/
-#define PIPE_BUFFER_SIZE 8192
+
 
 /**
   @brief The type of a thread ID.
@@ -515,14 +514,6 @@ typedef struct pipe_s {
 } pipe_t;
 
 
-typedef struct pipe_control_block {
-  FCB * reader, *writer;         //fd gia grapsimo kai diavasma
-  CondVar has_space;              //gia wait kai broadcast
-  CondVar has_data;
-  int w_position, r_position, space_remaining ;     //pou 8a grafw kai diavazw
-  char BUFFER[PIPE_BUFFER_SIZE];
-}pipe_cb;
-
 /*int space_man(pipe_cb pipeCB, int x){
   int in = pipeCB->w_position;
   int out = pipeCB->r_position;
@@ -542,6 +533,7 @@ typedef struct pipe_control_block {
 
 
 }*/
+
 /**
 	@brief Construct and return a pipe.
 

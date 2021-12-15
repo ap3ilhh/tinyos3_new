@@ -3,17 +3,10 @@
 #include "kernel_streams.h"
 #include "kernel_sched.h"
 #include "kernel_cc.h"
+#include "kernel_pipe.h"
 
-//ta vazw edw arxika kai vlepoume pou 8a mpoune
-int pipe_write(void* pipecb_t, const char *buf, unsigned int n);
-int pipe_read(void* pipecb_t, char *buf, unsigned int n);
-int pipe_writer_close(void* _pipecb);
-int pipe_reader_close(void* _pipecb);
-void* null_open(uint minor);
-int null_write(void* this, const char* buf, unsigned int size);
-int null_read(void* this, char *buf, unsigned int size);
 
-int count = 0;
+
 
 
 void* null_open(uint minor){
