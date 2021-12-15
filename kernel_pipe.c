@@ -126,6 +126,7 @@ int pipe_read(void* pipecb_t, char *buf, unsigned int n)
 				pipeCB->r_position = (pipeCB->r_position + 1)%PIPE_BUFFER_SIZE;
 			}
 			pipeCB->space_remaining += i;
+			return i;
 		}
 		return 0;
 	}
