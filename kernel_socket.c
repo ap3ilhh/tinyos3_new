@@ -14,37 +14,53 @@ static file_ops socket_file_ops = {
 
 Fid_t sys_Socket(port_t port)
 {	
-	if (port > MAX_PORT || port == NOPORT)
+	if (port >= MAX_PORT || port < 0)
 		return NOFILE;
 	Fid_t fid;
-  	FCB* fcb;
+  FCB* fcb;
 
 	if (FCB_reserve(1,&fid,&fcb) == 0){
 		return NOFILE;
 	}
 
-
-
 	socket_cb* socketCB;
 
 	socketCB = (socket_cb*)xmalloc(sizeof(socket_cb));
 
-	socketCB->refcount = 0;
+	socketCB->refcount = 0;			//TOCHECK
 	socketCB->fcb = fcb;
 	socketCB->type = SOCKET_UNBOUND;
 	socketCB->port = port;
-
+	rlnode_new(& socketCB->unbound_s.unbound_socket);
 
 	fcb->streamfunc = & socket_file_ops;
-  	fcb->streamobj = socketCB;
+  fcb->streamobj = socketCB;
 
 	return fid;
 }
 
 int sys_Listen(Fid_t sock)
 {
-	return -1;
+	FCB* fcb = get_fcb(sock);
+	if((sock < 0 || sock > 15) || (fcb == NULL) || (fcb->streamobj->port > MAX_PORT) ||
+	 (fcb->streamobj.port == NOPORT)){
+		return -1;
+	}
+	int flag = 0;
+	for (int i = 0; i < MAX_FILEID; i++)
+	{
+		if(FT[i]->streamobj.port == fcb->streamobj->port){
+			if(FT[i]->streamobj->type == SOCKET_LISTENER){
+				flag = 1;
+				break;
+			}
+		}
+	}
+	if(flag == 1)
+		return -1;
+
 }
+
 
 
 Fid_t sys_Accept(Fid_t lsock)
