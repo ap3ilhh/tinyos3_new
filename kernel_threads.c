@@ -216,11 +216,11 @@ void sys_ThreadExit(int exitval)
     curproc->pstate = ZOMBIE;
     
     /*free ola ta ptcb*/
-    rlnode* ptcb_l_node;
+    /*rlnode* ptcb_l_node;
     while(!is_rlist_empty(&CURPROC->ptcb_list)){
       ptcb_l_node = rlist_pop_front(&CURPROC->ptcb_list);
       free(ptcb_l_node->ptcb);
-    }
+    }*/
   }
 
 
