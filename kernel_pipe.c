@@ -111,25 +111,29 @@ int pipe_read(void* pipecb_t, char *buf, unsigned int n)
 
 	int i = 0;
 
-	if (pipeCB->writer == NULL){
-	  if(pipeCB->space_remaining != PIPE_BUFFER_SIZE){
-			for (; i < PIPE_BUFFER_SIZE - pipeCB->space_remaining; i++)
-			{
-				buf[i] = pipeCB->BUFFER[pipeCB->r_position];
-				pipeCB->r_position = (pipeCB->r_position + 1)%PIPE_BUFFER_SIZE;
-			}
-			pipeCB->space_remaining += i;
-			return i;
-		}
-		return 0;
-	}
+//	if (pipeCB->writer == NULL){
+//	  if(pipeCB->space_remaining != PIPE_BUFFER_SIZE){
+//			for (; i < PIPE_BUFFER_SIZE - pipeCB->space_remaining; i++)
+//			{
+//				buf[i] = pipeCB->BUFFER[pipeCB->r_position];
+//				pipeCB->r_position = (pipeCB->r_position + 1)%PIPE_BUFFER_SIZE;
+//			}
+//			pipeCB->space_remaining += i;
+//			return i;
+//		}
+//		return 0;
+//	}
 
 	while (pipeCB->space_remaining == PIPE_BUFFER_SIZE && pipeCB->writer != NULL){
 		kernel_wait(&pipeCB->has_data,SCHED_PIPE);
 	}
 
-	if (pipeCB->writer == NULL && pipeCB->space_remaining == PIPE_BUFFER_SIZE)
-		return -1;	
+//	if (pipeCB->writer == NULL && pipeCB->space_remaining == PIPE_BUFFER_SIZE)
+//		return -1;	
+
+	if (pipeCB->space_remaining == PIPE_BUFFER_SIZE)
+		return 0;
+
 	i = 0;
 	for (; i < PIPE_BUFFER_SIZE - pipeCB->space_remaining; i++)
 	{
@@ -169,5 +173,6 @@ int pipe_reader_close(void* _pipecb)
 
 	return 0;
 }
+
 
 
