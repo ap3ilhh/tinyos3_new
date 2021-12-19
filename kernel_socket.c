@@ -59,7 +59,8 @@ int sys_Listen(Fid_t sock)
 	socketCB->type = SOCKET_LISTENER;
 	/*arxikopoihsh tou head ths queue*/ 
 	rlnode_init(& socketCB->listener_s.queue, NULL); 
-
+	/*arxikopoihsh tou condition variable*/
+	socketCB->listener_s.req_available = COND_INIT;
 
 	/*if((sock < 0 || sock > 15) || (fcb == NULL) || (fcb->streamobj->port > MAX_PORT) ||
 	 (fcb->streamobj.port == NOPORT)){
