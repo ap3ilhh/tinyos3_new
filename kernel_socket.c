@@ -17,7 +17,7 @@ Fid_t sys_Socket(port_t port)
 	if (port >= MAX_PORT || port < 0)
 		return NOFILE;
 	Fid_t fid;
-  FCB* fcb;
+  	FCB* fcb;
 
 	if (FCB_reserve(1,&fid,&fcb) == 0){
 		return NOFILE;
@@ -34,7 +34,7 @@ Fid_t sys_Socket(port_t port)
 	rlnode_new(& socketCB->unbound_s.unbound_socket);
 
 	fcb->streamfunc = & socket_file_ops;
-  fcb->streamobj = socketCB;
+  	fcb->streamobj = socketCB;
 
 	return fid;
 }
@@ -53,7 +53,7 @@ int sys_Listen(Fid_t sock)
 	if ( (sock <0 || sock >15) || (socketCB->port == NOPORT) || (PORT_MAP[socketCB->port] != NULL) || (socketCB->type == SOCKET_LISTENER) ){
 		return -1;
 	}
-
+	/*install socket to PORT_MAP[]*/
 	PORT_MAP[socketCB->port] = socketCB;
 	/*kanw to socket listener*/
 	socketCB->type = SOCKET_LISTENER;
