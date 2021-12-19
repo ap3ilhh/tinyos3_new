@@ -20,7 +20,7 @@ typedef struct unbound_socket {
 }unbound_socket;
 
 typedef struct socket_control_block socket_cb;
-//pipe_cb* pipecb_t;
+
 
 typedef struct peer_socket {
 	socket_cb* peer;
