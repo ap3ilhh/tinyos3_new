@@ -59,6 +59,11 @@ int socket_close(void* socketcb_t);
 
 socket_cb* PORT_MAP[MAX_PORT];
 
-
+typedef struct connection_request{
+	int admitted;					/*flag=1 to request eksuphrethtai*/
+	socket_cb* peer;				/*deixnei sto socket pou exei kanei request*/
+	CondVar connected_cv;
+	rlnode queue_node;
+}connection_request;
 
 #endif
