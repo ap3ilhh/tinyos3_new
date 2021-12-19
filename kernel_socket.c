@@ -4,6 +4,7 @@
 #include "kernel_streams.h"
 #include "kernel_sched.h"
 #include "kernel_pipe.h"
+#include "kernel_cc.h"
 
 static file_ops socket_file_ops = {
   .Open = socket_open,
@@ -43,6 +44,9 @@ int sys_Listen(Fid_t sock)
 {
 	FCB* fcb = get_fcb(sock);
 
+	if (fcb != NULL)
+		return -1;
+
 	socket_cb* socketCB = fcb->streamobj;
 	
 	/*  paranomo file id 
@@ -58,9 +62,9 @@ int sys_Listen(Fid_t sock)
 	/*kanw to socket listener*/
 	socketCB->type = SOCKET_LISTENER;
 	/*arxikopoihsh tou head ths queue*/ 
-	rlnode_init(& socketCB->listener_s.queue, NULL); 
+	rlnode_init(& socketCB->listener_s.request_queue, NULL); 
 	/*arxikopoihsh tou condition variable*/
-	socketCB->listener_s.req_available = COND_INIT;
+	socketCB->listener_s.req_available_cv = COND_INIT;
 
 	/*if((sock < 0 || sock > 15) || (fcb == NULL) || (fcb->streamobj->port > MAX_PORT) ||
 	 (fcb->streamobj.port == NOPORT)){
@@ -85,7 +89,38 @@ int sys_Listen(Fid_t sock)
 
 Fid_t sys_Accept(Fid_t lsock)
 {
-	return NOFILE;
+	FCB* fcb = get_fcb(lsock);
+
+	if (fcb != NULL)
+		return NOFILE;
+
+	socket_cb* socketCB = fcb->streamobj;
+
+	if ( (lsock <0 || lsock >15) ){
+		return NOFILE;
+	}
+
+	/*oso h oura einai adeia kane kernel_wait*/
+	while (is_rlist_empty(& socketCB->listener_s.request_queue) && PORT_MAP[socketCB->port] != NULL){
+		kernel_wait(& socketCB->listener_s.req_available_cv ,SCHED_PIPE);
+	}
+
+	if (PORT_MAP[socketCB->port] == NULL)
+		return NOFILE;
+
+	rlnode* req_node = rlist_pop_front(& socketCB->listener_s.request_queue);
+
+	Fid_t sock2 = sys_Socket(socketCB->port);
+
+	if (sock2 == NOFILE)
+		return NOFILE;
+
+	FCB* fcb2 = get_fcb(sock2);
+
+	fcb2->
+
+	return fid;
+
 }
 
 

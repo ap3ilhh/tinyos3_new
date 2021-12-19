@@ -11,8 +11,8 @@ typedef enum {
 }socket_type;
 
 typedef struct listener_socket {
-	rlnode queue;
-	CondVar req_available;
+	rlnode request_queue;
+	CondVar req_available_cv;
 }listener_socket;
 
 typedef struct unbound_socket {
