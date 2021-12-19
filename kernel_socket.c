@@ -42,7 +42,26 @@ Fid_t sys_Socket(port_t port)
 int sys_Listen(Fid_t sock)
 {
 	FCB* fcb = get_fcb(sock);
-	if((sock < 0 || sock > 15) || (fcb == NULL) || (fcb->streamobj->port > MAX_PORT) ||
+
+	socket_cb* socketCB = fcb->streamobj;
+	
+	/*  paranomo file id 
+		not bound to a port
+		to port einai kateilhmmeno
+		to socket einai arxikopoihmeno 
+	*/	
+	if ( (sock <0 || sock >15) || (socketCB->port == NOPORT) || (PORT_MAP[socketCB->port] != NULL) || (socketCB->type == SOCKET_LISTENER) ){
+		return -1;
+	}
+
+	PORT_MAP[socketCB->port] = socketCB;
+	/*kanw to socket listener*/
+	socketCB->type = SOCKET_LISTENER;
+	/*arxikopoihsh tou head ths queue*/ 
+	rlnode_init(& socketCB->listener_s.queue, NULL); 
+
+
+	/*if((sock < 0 || sock > 15) || (fcb == NULL) || (fcb->streamobj->port > MAX_PORT) ||
 	 (fcb->streamobj.port == NOPORT)){
 		return -1;
 	}
@@ -57,8 +76,8 @@ int sys_Listen(Fid_t sock)
 		}
 	}
 	if(flag == 1)
-		return -1;
-
+		return -1;*/
+	return 0;	
 }
 
 
