@@ -109,7 +109,7 @@ Fid_t sys_Accept(Fid_t lsock)
 	socket_cb* socketCB = fcb->streamobj;
 
 	/*den exei ginei
-		the available file ids for the process are exhausted
+		the available file ids for the process are exhausted*/
 
 	if ( (lsock <0 || lsock >15) || socketCB->type != SOCKET_LISTENER){
 		return NOFILE;
