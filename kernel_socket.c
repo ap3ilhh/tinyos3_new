@@ -168,28 +168,48 @@ Fid_t sys_Accept(Fid_t lsock)
 int sys_Connect(Fid_t sock, port_t port, timeout_t timeout)
 {	
 	//elegxoi gia lathos
+	/*  asundeto port
+		non-listening socket ??????
+		illegal port
+		to port den exei listener
+	*/
 
+	if (PORT_MAP[port] == NULL || port <=0 || port >= MAX_PORT)
+		return -1;
+
+	socket_cb* listen_sock = PORT_MAP[port]->fcb->streamobj;
+	if (listen_sock->type != SOCKET_LISTENER)
+		return -1;	 			
+
+	int time;
 	FCB* fcb = get_fcb(sock);
 
 	if (fcb == NULL)
 		return -1;
 
-	socket_cb* socketCB = fcb->streamobj;
+	socket_cb* cli_sockCB = fcb->streamobj;
 	connection_request* req = (connection_request*)xmalloc(sizeof(connection_request));
 
 	req->admitted = 0;
-	req->peer = socketCB;
+	/*autos pou zhtaei to request*/
+	req->peer = cli_sockCB;
 	req->connected_cv = COND_INIT;
 	rlnode_init(& req->queue_node, req);
 
+	/*to request bainei sthn oura tou listener*/
 	socket_cb* listener_sock = PORT_MAP[port];
 	rlist_push_back(& listener_sock->listener_s.request_queue,& req->queue_node);
-
+	/*ksupanei ton listener*/
+	kernel_signal(&listener_sock->listener_s.req_available_cv);
+	/*oso den eksuphrethtai to request kane kernel_wait gia timeout xrono*/
 	while(req->admitted == 0)
 	{
-		kernel_timedwait(& req->connected_cv, SCHED_PIPE,timeout);
+		time = kernel_timedwait(& req->connected_cv, SCHED_PIPE,timeout);
+		if (time == 0)
+			break;
 	}
-	return -1;
+
+	return 0;
 }
 
 
