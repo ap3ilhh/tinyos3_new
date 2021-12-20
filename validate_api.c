@@ -1761,11 +1761,11 @@ BOOT_TEST(test_listen_fails_on_occupied_port,
 	"Test that Listen fails on an occupied port"
 	)
 {
-	Fid_t f = Socket(100);
+	Fid_t f = Socket(10);
 	ASSERT(Listen(f)==0);
-	ASSERT(Listen(Socket(100))==-1);
+	ASSERT(Listen(Socket(10))==-1);
 	Close(f);
-	ASSERT(Listen(Socket(100))==0);	
+	ASSERT(Listen(Socket(10))==0);	
 	return 0;
 }
 

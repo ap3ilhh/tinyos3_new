@@ -66,4 +66,5 @@ typedef struct connection_request{
 	rlnode queue_node;
 }connection_request;
 
+void initialize_port_map();
 #endif

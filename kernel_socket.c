@@ -13,12 +13,14 @@ static file_ops socket_file_ops = {
   .Close = socket_close
 };
 
+static int first_listen = 0;
+
 Fid_t sys_Socket(port_t port)
 {	
-	if (port >= MAX_PORT || port < 0)
+	if (port > MAX_PORT || port < 0)
 		return NOFILE;
 	Fid_t fid;
-  	FCB* fcb;
+  FCB* fcb;
 
 	if (FCB_reserve(1,&fid,&fcb) == 0){
 		return NOFILE;
@@ -35,19 +37,29 @@ Fid_t sys_Socket(port_t port)
 	rlnode_new(& socketCB->unbound_s.unbound_socket);
 
 	fcb->streamfunc = & socket_file_ops;
-  	fcb->streamobj = socketCB;
+  fcb->streamobj = socketCB;
 
 	return fid;
 }
 
 int sys_Listen(Fid_t sock)
 {
+	/*if (first_listen == 0)
+	{
+		initialize_port_map();
+		first_listen = 1;
+	}*/
+	
+
 	FCB* fcb = get_fcb(sock);
 
-	if (fcb != NULL)
+	if (fcb == NULL)
 		return -1;
 
 	socket_cb* socketCB = fcb->streamobj;
+
+	if (socketCB == NULL)
+		return -1;
 	
 	/*  paranomo file id 
 		not bound to a port
@@ -96,7 +108,10 @@ Fid_t sys_Accept(Fid_t lsock)
 
 	socket_cb* socketCB = fcb->streamobj;
 
-	if ( (lsock <0 || lsock >15) ){
+	/*den exei ginei
+		the available file ids for the process are exhausted
+
+	if ( (lsock <0 || lsock >15) || socketCB->type != SOCKET_LISTENER){
 		return NOFILE;
 	}
 
