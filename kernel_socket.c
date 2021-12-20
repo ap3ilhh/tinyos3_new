@@ -91,7 +91,7 @@ Fid_t sys_Accept(Fid_t lsock)
 {
 	FCB* fcb = get_fcb(lsock);
 
-	if (fcb != NULL)
+	if (fcb == NULL)
 		return NOFILE;
 
 	socket_cb* socketCB = fcb->streamobj;
@@ -100,32 +100,95 @@ Fid_t sys_Accept(Fid_t lsock)
 		return NOFILE;
 	}
 
-	/*oso h oura einai adeia kane kernel_wait*/
+	/*oso h oura einai adeia kai den exei kleisei to port kane kernel_wait*/
 	while (is_rlist_empty(& socketCB->listener_s.request_queue) && PORT_MAP[socketCB->port] != NULL){
 		kernel_wait(& socketCB->listener_s.req_available_cv ,SCHED_PIPE);
 	}
-
+	/*an ekleise to port*/
 	if (PORT_MAP[socketCB->port] == NULL)
 		return NOFILE;
 
-	rlnode* req_node = rlist_pop_front(& socketCB->listener_s.request_queue);
+	/*alliws yparxei request*/
 
-	Fid_t sock2 = sys_Socket(socketCB->port);
+	/*pernw apo th lista to request*/
+	rlnode* cli_node = rlist_pop_front(& socketCB->listener_s.request_queue);
+	/*pernw ton client*/
+	socket_cb* cli_sockCB = cli_node->req->peer;
 
-	if (sock2 == NOFILE)
+	/*dhmiourgia enos socket gia na uparksei epikoinwnia metaksu server-client*/
+	Fid_t srv_sock = sys_Socket(socketCB->port);
+
+	if (srv_sock == NOFILE)
 		return NOFILE;
 
-	FCB* fcb2 = get_fcb(sock2);
+	FCB* fcb_srv = get_fcb(srv_sock);
 
-	fcb2->
+	if (fcb_srv == NULL)
+		return NOFILE;
 
-	return fid;
+	socket_cb* srv_shockCB = fcb_srv->streamobj;
+
+	/*dhmiourgia 2 pipe_control_block gia thn epikoinwnia twn streams*/
+	pipe_cb* pipeCB1 = (pipe_cb*)xmalloc(sizeof(pipe_cb));
+	pipe_cb* pipeCB2 = (pipe_cb*)xmalloc(sizeof(pipe_cb));
+
+	/*FCB_reserve(1)
+
+	pipeCB1->reader
+	pipeCB1->writer
+	pipeCB1->has_space
+	pipeCB1->has_data
+	pipeCB1->w_position
+	pipeCB1->r_position
+	pipeCB1->space_remaining*/
+
+
+	/*metatroph tou server apo UNBOUND se PEER*/
+
+	srv_shockCB->type = SOCKET_PEER;
+	/*o server deixnei ston client*/
+	srv_shockCB->peer_s.peer = cli_sockCB;
+	srv_shockCB->peer_s.write_pipe = pipeCB1;
+	srv_shockCB->peer_s.read_pipe = pipeCB2;
+
+	/*metatroph tou server apo UNBOUND se PEER*/
+
+	cli_sockCB->type = SOCKET_PEER;
+	/*o  client  deixnei ston server*/
+	cli_sockCB->peer_s.peer = cli_sockCB;
+	cli_sockCB->peer_s.write_pipe = pipeCB2;
+	cli_sockCB->peer_s.read_pipe = pipeCB1;
+	
+
+	return srv_sock;
 
 }
 
 
 int sys_Connect(Fid_t sock, port_t port, timeout_t timeout)
-{
+{	
+	//elegxoi gia lathos
+
+	FCB* fcb = get_fcb(sock);
+
+	if (fcb == NULL)
+		return -1;
+
+	socket_cb* socketCB = fcb->streamobj;
+	connection_request* req = (connection_request*)xmalloc(sizeof(connection_request));
+
+	req->admitted = 0;
+	req->peer = socketCB;
+	req->connected_cv = COND_INIT;
+	rlnode_init(& req->queue_node, req);
+
+	socket_cb* listener_sock = PORT_MAP[port];
+	rlist_push_back(& listener_sock->listener_s.request_queue,& req->queue_node);
+
+	while(req->admitted == 0)
+	{
+		kernel_timedwait(& req->connected_cv, SCHED_PIPE,timeout);
+	}
 	return -1;
 }
 

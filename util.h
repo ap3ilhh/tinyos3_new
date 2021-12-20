@@ -292,6 +292,7 @@ typedef struct file_control_block FCB;		/**< @brief Forward declaration */
 
 /***************************************************/
 typedef struct process_thread_control_block PTCB;
+typedef struct connection_request request;
 
 /** @brief A convenience typedef */
 typedef struct resource_list_node * rlnode_ptr;
@@ -314,7 +315,7 @@ typedef struct resource_list_node {
   union {
   	/***********************************/
   	PTCB* ptcb;
-
+  	request* req;
     PCB* pcb; 
     TCB* tcb;
     CCB* ccb;
