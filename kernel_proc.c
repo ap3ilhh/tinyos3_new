@@ -363,35 +363,65 @@ void* null_procinfo_open(uint minor){
   return NULL;
 }
 
-int null_procinfo_write(void* this, const char* buf, unsigned int size){
+int null_procinfo_write(void* procinfoCB_t, const char* buf, unsigned int size){
   return -1;
 }
 
 Fid_t sys_OpenInfo()
 {
- /* Fid_t fid;
+  Fid_t fid;
   FCB* fcb;
 
   if (FCB_reserve(1,&fid,&fcb) == 0){
     return NOFILE;
   }
 
-  procinfo_cb* procinfo_cb;
-  procinfo_cb = (procinfo_cb*)xmalloc(sizeof(procinfo_cb));
+  procinfo_cb* procinfoCB;
+  procinfoCB = (procinfo_cb*)xmalloc(sizeof(procinfo_cb));
 
-  procinfo_cb->
+  procinfoCB->PCB_cursor = 0;
 
-  fcb->streamobj = procinfo_cb;
-  fcb->streamfunc = procinfo_ops;
+  fcb->streamobj = procinfoCB;
+  fcb->streamfunc = &procinfo_ops;
 
-  return fid;*/
-	 return NOFILE;
+  return fid;
 }
 
-int procinfo_close(void* _pipecb){
-  return -1;
+int procinfo_close(void* procinfoCB_t){
+  if (procinfoCB_t == NULL)
+    return -1;
+  free(procinfoCB_t);
+  return 0;
 }
 
-int procinfo_read(void* pipecb_t, char *buf, unsigned int n){
-  return -1;
+int procinfo_read(void* procinfoCB_t, char *buf, unsigned int n){
+  procinfo_cb* procinfoCB = (procinfo_cb*)procinfoCB_t;
+  if (procinfoCB == NULL)
+    return -1;
+
+  PCB proc = PT[procinfoCB->PCB_cursor];
+
+  procinfoCB->p_info.pid = get_pid(&proc);
+  procinfoCB->p_info.ppid =get_pid(proc.parent);
+  if (proc.pstate == ALIVE){
+    procinfoCB->p_info.alive = 1;
+  }
+  else if (proc.pstate == ZOMBIE){
+    procinfoCB->p_info.alive = 0;
+  }
+  
+  procinfoCB->p_info.thread_count = proc.thread_count;
+  procinfoCB->p_info.main_task = proc.main_task;
+  procinfoCB->p_info.argl =  proc.argl;
+  //memcpy(procinfoCB->p_info.args,(char*)&proc.args,sizeof(PROCINFO_MAX_ARGS_SIZE));
+
+  //char args[PROCINFO_MAX_ARGS_SIZE];
+
+  //int evt = (dir==IODIR_RX) ? POLLIN : POLLOUT;
+
+  memcpy(buf,(char*)&procinfoCB->p_info,sizeof(procinfoCB->p_info)); 
+
+   procinfoCB->PCB_cursor++;
+
+   return sizeof(procinfoCB->p_info);
 }
