@@ -31,7 +31,7 @@ Fid_t sys_Socket(port_t port)
 
 	socketCB = (socket_cb*)xmalloc(sizeof(socket_cb));
 
-	socketCB->refcount = 0;			//TOCHECK
+	socketCB->refcount = 1;			
 	socketCB->fcb = fcb;
 	socketCB->type = SOCKET_UNBOUND;
 	socketCB->port = port;
@@ -79,22 +79,7 @@ int sys_Listen(Fid_t sock)
 	/*arxikopoihsh tou condition variable*/
 	socketCB->listener_s.req_available_cv = COND_INIT;
 
-	/*if((sock < 0 || sock > 15) || (fcb == NULL) || (fcb->streamobj->port > MAX_PORT) ||
-	 (fcb->streamobj.port == NOPORT)){
-		return -1;
-	}
-	int flag = 0;
-	for (int i = 0; i < MAX_FILEID; i++)
-	{
-		if(FT[i]->streamobj.port == fcb->streamobj->port){
-			if(FT[i]->streamobj->type == SOCKET_LISTENER){
-				flag = 1;
-				break;
-			}
-		}
-	}
-	if(flag == 1)
-		return -1;*/
+	
 	return 0;	
 }
 
@@ -128,13 +113,16 @@ Fid_t sys_Accept(Fid_t lsock)
 
 	socketCB->refcount++;
 
+	int port = socketCB->port;
 	/*oso h oura einai adeia kai den exei kleisei to port kane kernel_wait*/
-	while (is_rlist_empty(& socketCB->listener_s.request_queue) && PORT_MAP[socketCB->port] != NULL){
+	while (is_rlist_empty(& socketCB->listener_s.request_queue) && PORT_MAP[port]!= NULL){
 		kernel_wait(& socketCB->listener_s.req_available_cv ,SCHED_PIPE);
 	}
 	/*an ekleise to port*/
-	if (PORT_MAP[socketCB->port] == NULL)
+	if (PORT_MAP[port] == NULL){
+		socketCB->refcount--;
 		return NOFILE;
+	}
 
 	/*yparxei request*/
 
@@ -148,13 +136,17 @@ Fid_t sys_Accept(Fid_t lsock)
 	/*dhmiourgia enos peer socket gia na uparksei epikoinwnia metaksu server-client*/
 	Fid_t srv_sock = sys_Socket(socketCB->port);
 
-	if (srv_sock == NOFILE)
+	if (srv_sock == NOFILE){
+		socketCB->refcount--;
 		return NOFILE;
+	}
 
 	FCB* fcb_srv = get_fcb(srv_sock);
 
-	if (fcb_srv == NULL)
+	if (fcb_srv == NULL){
+		socketCB->refcount--;
 		return NOFILE;
+	}
 
 	socket_cb* srv_shockCB = fcb_srv->streamobj;
 
@@ -164,7 +156,8 @@ Fid_t sys_Accept(Fid_t lsock)
 	FCB *reader_p1, *writer_p1;	
 
 /******************************/
-
+	reader_p1 = srv_shockCB->fcb;
+	writer_p1 = cli_sockCB->fcb;
 	//initialize pipeCB1
 	pipeCB1->reader = reader_p1;
 	pipeCB1->writer = writer_p1;
@@ -180,7 +173,8 @@ Fid_t sys_Accept(Fid_t lsock)
 	FCB *reader_p2, *writer_p2;
 
 /******************************/
-
+	reader_p2 = cli_sockCB->fcb;
+	writer_p2 = srv_shockCB->fcb;
 	//initialize pipeCB2
 	pipeCB2->reader = reader_p2;
 	pipeCB2->writer = writer_p2;
@@ -210,7 +204,6 @@ Fid_t sys_Accept(Fid_t lsock)
 	kernel_signal(& cli_node->req->connected_cv);
 
 	socketCB->refcount--;
-	//free();
 	return srv_sock;
 
 }
@@ -226,15 +219,19 @@ int sys_Connect(Fid_t sock, port_t port, timeout_t timeout)
 		to port den exei listener
 	*/
 
-	if (PORT_MAP[port] == NULL || port <=0 || port >= MAX_PORT)
+	if (port <=0 || port >= MAX_PORT || PORT_MAP[port] == NULL )
 		return -1;
 
-	socket_cb* listen_sock = PORT_MAP[port]->fcb->streamobj;
+	socket_cb* listen_sock = PORT_MAP[port];
+
+	if (listen_sock == NULL )
+		return -1;
 
 	if (listen_sock->type != SOCKET_LISTENER)
 		return -1;	 			
 
 	int time;
+
 	FCB* fcb = get_fcb(sock);
 
 	if (fcb == NULL)
@@ -251,15 +248,13 @@ int sys_Connect(Fid_t sock, port_t port, timeout_t timeout)
 	req->connected_cv = COND_INIT;
 	rlnode_init(& req->queue_node, req);
 
-	/*to request bainei sthn oura tou listener*/
-	socket_cb* listener_sock = PORT_MAP[port];
-	rlist_push_back(& listener_sock->listener_s.request_queue,& req->queue_node);
+	rlist_push_back(& listen_sock->listener_s.request_queue,& req->queue_node);
 	/*ksupanei ton listener*/
-	kernel_signal(&listener_sock->listener_s.req_available_cv);
+	kernel_signal(&listen_sock->listener_s.req_available_cv);
 	/*oso den eksuphrethtai to request kane kernel_wait gia timeout xrono*/
 	while(req->admitted == 0)
 	{
-		time = kernel_timedwait(& req->connected_cv, SCHED_PIPE,timeout);
+		time = kernel_timedwait(& req->connected_cv, SCHED_PIPE,timeout*1000);
 		if (time == 0){
 			break;
 		}
@@ -280,10 +275,6 @@ int sys_Connect(Fid_t sock, port_t port, timeout_t timeout)
 int sys_ShutDown(Fid_t sock, shutdown_mode how)
 {
 
-	if ( sock <0 || sock >15){
-		return -1;
-	}
-
 	FCB* fcb = get_fcb(sock);
 
 	if (fcb == NULL)
@@ -291,51 +282,96 @@ int sys_ShutDown(Fid_t sock, shutdown_mode how)
 
 	socket_cb* socketCB = fcb->streamobj;
 
-	pipe_cb* write_pipe;
-	pipe_cb* read_pipe;
-
-	if (socketCB->type == SOCKET_PEER)
-	{
-		write_pipe = socketCB->peer_s.write_pipe;
-		read_pipe = socketCB->peer_s.read_pipe;
-	}else
+	if (socketCB->type != SOCKET_PEER)
 		return -1;
 
+	
 	switch(how)
 	{
 		case SHUTDOWN_READ:
-			pipe_reader_close(read_pipe);
+			if (socketCB->peer_s.read_pipe != NULL)  
+				pipe_reader_close(socketCB->peer_s.read_pipe);
+			socketCB->peer_s.read_pipe = NULL;
 			break;
 		case SHUTDOWN_WRITE:
-			pipe_writer_close(write_pipe);
+			if (socketCB->peer_s.write_pipe != NULL)
+				pipe_writer_close(socketCB->peer_s.write_pipe);
+			socketCB->peer_s.write_pipe = NULL;
 			break;
 		case SHUTDOWN_BOTH:
-			pipe_reader_close(read_pipe);	
-			pipe_writer_close(write_pipe);
+			if (socketCB->peer_s.read_pipe != NULL) 
+				pipe_reader_close(socketCB->peer_s.read_pipe);
+			socketCB->peer_s.read_pipe = NULL;
+			if (socketCB->peer_s.write_pipe != NULL)		
+				pipe_writer_close(socketCB->peer_s.write_pipe);
+			socketCB->peer_s.write_pipe = NULL;
 			break;
+		default:
+			return -1;	
 	}
 	return 0;
 }
 
 
-int socket_read(void* socketcb_t, char *buf, unsigned int n){
-	return -1;
+int socket_read(void* socketcb_t, char *buf, unsigned int n)
+{	
+	socket_cb* socketCB= (socket_cb*)socketcb_t;
+
+	if (socketCB == NULL)
+		return -1;
+
+	if (socketCB->peer_s.read_pipe == NULL || socketCB->type != SOCKET_PEER)
+		return -1;
+
+	return pipe_read(socketCB->peer_s.read_pipe, buf, n);
 }
 
-int socket_write(void* socketcb_t, const char *buf, unsigned int n){
-	return -1;
+int socket_write(void* socketcb_t, const char *buf, unsigned int n)
+{
+	socket_cb* socketCB= (socket_cb*)socketcb_t;
+
+	if (socketCB == NULL)
+		return -1;
+
+	if (socketCB->peer_s.write_pipe == NULL || socketCB->type != SOCKET_PEER)
+		return -1;
+
+	return pipe_write(socketCB->peer_s.write_pipe, buf, n);
 }
 
-int socket_close(void* socketcb_t){
+int socket_close(void* socketcb_t)
+{
 
 	socket_cb* socketCB = (socket_cb*)socketcb_t;
 
 	if (socketCB == NULL)
 		return -1;
 
-	socketCB->fcb = NULL;
-	PORT_MAP[socketCB->port] = NULL;
-	free(socketCB);
+	socketCB->refcount--;
+
+	if (socketCB->type == SOCKET_LISTENER)
+	{
+		PORT_MAP[socketCB->port] = NULL;
+
+		kernel_broadcast(& socketCB->listener_s.req_available_cv);
+	}
+	//else if (socketCB->type == SOCKET_UNBOUND){
+
+	//}
+	else if (socketCB->type == SOCKET_PEER)
+	{
+		if (socketCB->peer_s.read_pipe != NULL)
+			pipe_reader_close(socketCB->peer_s.read_pipe);
+
+		if (socketCB->peer_s.write_pipe != NULL)
+			pipe_writer_close(socketCB->peer_s.write_pipe);
+
+	} 
+
+
+	
+	if (socketCB->refcount == 0)
+		free(socketCB);
 
 
 	return 0;
