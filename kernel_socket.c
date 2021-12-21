@@ -5,6 +5,7 @@
 #include "kernel_sched.h"
 #include "kernel_pipe.h"
 #include "kernel_cc.h"
+#include "kernel_proc.h"
 
 static file_ops socket_file_ops = {
   .Open = socket_open,
@@ -108,12 +109,24 @@ Fid_t sys_Accept(Fid_t lsock)
 
 	socket_cb* socketCB = fcb->streamobj;
 
-	/*den exei ginei
-		the available file ids for the process are exhausted*/
-
 	if ( (lsock <0 || lsock >15) || socketCB->type != SOCKET_LISTENER){
 		return NOFILE;
 	}
+
+	/*den exei ginei
+	the available file ids for the process are exhausted*/
+
+	PCB* curproc = CURPROC;
+	for (int i = 0; i < MAX_FILEID; i++)
+	{
+		if (curproc->FIDT[i] == NULL)
+			break;
+		if (MAX_FILEID - 1 == i){
+			return -1;
+		}
+	}
+
+	socketCB->refcount++;
 
 	/*oso h oura einai adeia kai den exei kleisei to port kane kernel_wait*/
 	while (is_rlist_empty(& socketCB->listener_s.request_queue) && PORT_MAP[socketCB->port] != NULL){
@@ -123,14 +136,16 @@ Fid_t sys_Accept(Fid_t lsock)
 	if (PORT_MAP[socketCB->port] == NULL)
 		return NOFILE;
 
-	/*alliws yparxei request*/
+	/*yparxei request*/
 
 	/*pernw apo th lista to request*/
 	rlnode* cli_node = rlist_pop_front(& socketCB->listener_s.request_queue);
 	/*pernw ton client*/
 	socket_cb* cli_sockCB = cli_node->req->peer;
+	/*o client eksuphrethtai*/
+	cli_node->req->admitted = 1;
 
-	/*dhmiourgia enos socket gia na uparksei epikoinwnia metaksu server-client*/
+	/*dhmiourgia enos peer socket gia na uparksei epikoinwnia metaksu server-client*/
 	Fid_t srv_sock = sys_Socket(socketCB->port);
 
 	if (srv_sock == NOFILE)
@@ -145,18 +160,35 @@ Fid_t sys_Accept(Fid_t lsock)
 
 	/*dhmiourgia 2 pipe_control_block gia thn epikoinwnia twn streams*/
 	pipe_cb* pipeCB1 = (pipe_cb*)xmalloc(sizeof(pipe_cb));
+	
+	FCB *reader_p1, *writer_p1;	
+
+/******************************/
+
+	//initialize pipeCB1
+	pipeCB1->reader = reader_p1;
+	pipeCB1->writer = writer_p1;
+	pipeCB1->has_space = COND_INIT;
+	pipeCB1->has_data = COND_INIT;
+	pipeCB1->w_position = 0;  
+	pipeCB1->r_position = 0; 
+	pipeCB1->space_remaining = PIPE_BUFFER_SIZE;
+
+
 	pipe_cb* pipeCB2 = (pipe_cb*)xmalloc(sizeof(pipe_cb));
 
-	/*FCB_reserve(1)
+	FCB *reader_p2, *writer_p2;
 
-	pipeCB1->reader
-	pipeCB1->writer
-	pipeCB1->has_space
-	pipeCB1->has_data
-	pipeCB1->w_position
-	pipeCB1->r_position
-	pipeCB1->space_remaining*/
+/******************************/
 
+	//initialize pipeCB2
+	pipeCB2->reader = reader_p2;
+	pipeCB2->writer = writer_p2;
+	pipeCB2->has_space = COND_INIT;
+	pipeCB2->has_data = COND_INIT;
+	pipeCB2->w_position = 0;  
+	pipeCB2->r_position = 0; 
+	pipeCB2->space_remaining = PIPE_BUFFER_SIZE;
 
 	/*metatroph tou server apo UNBOUND se PEER*/
 
@@ -166,7 +198,7 @@ Fid_t sys_Accept(Fid_t lsock)
 	srv_shockCB->peer_s.write_pipe = pipeCB1;
 	srv_shockCB->peer_s.read_pipe = pipeCB2;
 
-	/*metatroph tou server apo UNBOUND se PEER*/
+	/*metatroph tou client apo UNBOUND se PEER*/
 
 	cli_sockCB->type = SOCKET_PEER;
 	/*o  client  deixnei ston server*/
@@ -174,16 +206,21 @@ Fid_t sys_Accept(Fid_t lsock)
 	cli_sockCB->peer_s.write_pipe = pipeCB2;
 	cli_sockCB->peer_s.read_pipe = pipeCB1;
 	
+	/*ksypna auton pou exei kanei request kai perimenei*/
+	kernel_signal(& cli_node->req->connected_cv);
 
+	socketCB->refcount--;
+	//free();
 	return srv_sock;
 
 }
 
+	
 
 int sys_Connect(Fid_t sock, port_t port, timeout_t timeout)
 {	
 	//elegxoi gia lathos
-	/*  asundeto port
+	/*asundeto port
 		non-listening socket ??????
 		illegal port
 		to port den exei listener
@@ -193,6 +230,7 @@ int sys_Connect(Fid_t sock, port_t port, timeout_t timeout)
 		return -1;
 
 	socket_cb* listen_sock = PORT_MAP[port]->fcb->streamobj;
+
 	if (listen_sock->type != SOCKET_LISTENER)
 		return -1;	 			
 
@@ -204,6 +242,8 @@ int sys_Connect(Fid_t sock, port_t port, timeout_t timeout)
 
 	socket_cb* cli_sockCB = fcb->streamobj;
 	connection_request* req = (connection_request*)xmalloc(sizeof(connection_request));
+
+	cli_sockCB->refcount++;
 
 	req->admitted = 0;
 	/*autos pou zhtaei to request*/
@@ -220,9 +260,18 @@ int sys_Connect(Fid_t sock, port_t port, timeout_t timeout)
 	while(req->admitted == 0)
 	{
 		time = kernel_timedwait(& req->connected_cv, SCHED_PIPE,timeout);
-		if (time == 0)
+		if (time == 0){
 			break;
+		}
+
+			
 	}
+
+	cli_sockCB->refcount--;
+
+		if (time == 0){
+			return -1;
+		}
 
 	return 0;
 }
@@ -230,7 +279,42 @@ int sys_Connect(Fid_t sock, port_t port, timeout_t timeout)
 
 int sys_ShutDown(Fid_t sock, shutdown_mode how)
 {
-	return -1;
+
+	if ( sock <0 || sock >15){
+		return -1;
+	}
+
+	FCB* fcb = get_fcb(sock);
+
+	if (fcb == NULL)
+		return -1;
+
+	socket_cb* socketCB = fcb->streamobj;
+
+	pipe_cb* write_pipe;
+	pipe_cb* read_pipe;
+
+	if (socketCB->type == SOCKET_PEER)
+	{
+		write_pipe = socketCB->peer_s.write_pipe;
+		read_pipe = socketCB->peer_s.read_pipe;
+	}else
+		return -1;
+
+	switch(how)
+	{
+		case SHUTDOWN_READ:
+			pipe_reader_close(read_pipe);
+			break;
+		case SHUTDOWN_WRITE:
+			pipe_writer_close(write_pipe);
+			break;
+		case SHUTDOWN_BOTH:
+			pipe_reader_close(read_pipe);	
+			pipe_writer_close(write_pipe);
+			break;
+	}
+	return 0;
 }
 
 
@@ -243,7 +327,19 @@ int socket_write(void* socketcb_t, const char *buf, unsigned int n){
 }
 
 int socket_close(void* socketcb_t){
-	return -1;
+
+	socket_cb* socketCB = (socket_cb*)socketcb_t;
+
+	if (socketCB == NULL)
+		return -1;
+
+	socketCB->fcb = NULL;
+	PORT_MAP[socketCB->port] = NULL;
+	free(socketCB);
+
+
+	return 0;
+
 }
 
 void* socket_open(uint minor){

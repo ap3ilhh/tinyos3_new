@@ -1760,7 +1760,7 @@ BOOT_TEST(test_listen_fails_on_NOPORT,
 BOOT_TEST(test_listen_fails_on_occupied_port,
 	"Test that Listen fails on an occupied port"
 	)
-{
+{	
 	Fid_t f = Socket(10);
 	ASSERT(Listen(f)==0);
 	ASSERT(Listen(Socket(10))==-1);
