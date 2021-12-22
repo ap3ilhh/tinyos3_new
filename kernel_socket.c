@@ -67,7 +67,8 @@ int sys_Listen(Fid_t sock)
 		to port einai kateilhmmeno
 		to socket einai arxikopoihmeno 
 	*/	
-	if ( (sock <0 || sock >15) || (socketCB->port == NOPORT) || (PORT_MAP[socketCB->port] != NULL) || (socketCB->type == SOCKET_LISTENER) ){
+	if ( (sock <0 || sock >15) || (socketCB->port == NOPORT) || (PORT_MAP[socketCB->port] != NULL) || 
+		(socketCB->type != SOCKET_UNBOUND) || (socketCB->type == SOCKET_LISTENER) ){
 		return -1;
 	}
 	/*install socket to PORT_MAP[]*/
@@ -94,7 +95,7 @@ Fid_t sys_Accept(Fid_t lsock)
 
 	socket_cb* socketCB = fcb->streamobj;
 
-	if ( (lsock <0 || lsock >15) || socketCB->type != SOCKET_LISTENER){
+	if (socketCB->type != SOCKET_LISTENER){
 		return NOFILE;
 	}
 

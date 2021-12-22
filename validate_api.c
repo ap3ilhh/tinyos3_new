@@ -1805,7 +1805,6 @@ BOOT_TEST(test_accept_fails_on_bad_fid,
 	ASSERT(Accept(OpenNull())==-1);
 	ASSERT(Accept(NOFILE)==-1);
 	ASSERT(Accept(MAX_FILEID)==-1);
-	
 	return 0;
 }
 

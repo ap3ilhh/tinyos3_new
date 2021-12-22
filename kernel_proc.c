@@ -413,7 +413,7 @@ int procinfo_read(void* procinfoCB_t, char *buf, unsigned int n)
     else
     {
       PCB proc = PT[procinfoCB->PCB_cursor];
-
+      /*enhmerwsh procinfo*/
       procinfoCB->p_info.pid = get_pid(&PT[procinfoCB->PCB_cursor]);
       procinfoCB->p_info.ppid = get_pid(proc.parent);
 
