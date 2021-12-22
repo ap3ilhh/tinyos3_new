@@ -94,7 +94,10 @@ Fid_t sys_Accept(Fid_t lsock)
 		return NOFILE;
 
 	socket_cb* socketCB = fcb->streamobj;
-
+	
+	if (socketCB == NULL)
+		return -1;
+	
 	if (socketCB->type != SOCKET_LISTENER){
 		return NOFILE;
 	}
