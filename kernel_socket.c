@@ -94,7 +94,7 @@ Fid_t sys_Accept(Fid_t lsock)
 		return NOFILE;
 
 	socket_cb* socketCB = fcb->streamobj;
-	
+
 	if (socketCB == NULL)
 		return -1;
 	
@@ -372,7 +372,8 @@ int socket_close(void* socketcb_t)
 
 	} 
 
-
+	if (socketCB == NULL)
+		return -1;
 	
 	if (socketCB->refcount == 0)
 		free(socketCB);
