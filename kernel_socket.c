@@ -242,6 +242,10 @@ int sys_Connect(Fid_t sock, port_t port, timeout_t timeout)
 		return -1;
 
 	socket_cb* cli_sockCB = fcb->streamobj;
+	
+	if (cli_sockCB->type == SOCKET_LISTENER || cli_sockCB->type == SOCKET_PEER)
+		return -1;
+
 	connection_request* req = (connection_request*)xmalloc(sizeof(connection_request));
 
 	cli_sockCB->refcount++;
@@ -261,16 +265,14 @@ int sys_Connect(Fid_t sock, port_t port, timeout_t timeout)
 		time = kernel_timedwait(& req->connected_cv, SCHED_PIPE,timeout*1000);
 		if (time == 0){
 			break;
-		}
-
-			
+		}	
 	}
 
 	cli_sockCB->refcount--;
 
-		if (time == 0){
-			return -1;
-		}
+	if (time == 0){
+		return -1;
+	}
 
 	return 0;
 }
