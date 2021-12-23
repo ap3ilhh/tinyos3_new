@@ -14,8 +14,6 @@ static file_ops socket_file_ops = {
   .Close = socket_close
 };
 
-static int first_listen = 0;
-
 Fid_t sys_Socket(port_t port)
 {	
 	if (port > MAX_PORT || port < 0)
